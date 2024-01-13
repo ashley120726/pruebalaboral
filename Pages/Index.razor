@@ -1,0 +1,307 @@
+﻿@page "/"
+
+@using System;
+@using System.Text
+@using System.Net.Http;
+@using System.Net.Http.Json;
+@using Newtonsoft.Json;
+@using System.Text.Json;
+@using System.Threading.Tasks;
+@using System.Collections.Generic;
+@using pruebalaboral.Data;
+
+
+@*LISTA DE TAREAS PENDIENTES (TABLA)*@
+<h1>Lista de Tareas Pendientes</h1>
+
+<label>Filtrar por:</label>
+<select @bind="filtroSeleccionado">
+    <option value="Todos">Todos</option>
+    <option value="Completadas">Completadas</option>
+    <option value="Pendientes">Pendientes</option>
+</select>
+
+@if(datos != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Marcado</th>
+                <th>Id</th>
+                <th>Tarea</th>
+                <th>Estado</th>
+                <th>UserId</th>
+                <th>Editar</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var todos in FiltrarTareas())
+            {
+                <tr>
+                    <td><input type="checkbox" @bind="todos.completed"/></td>
+                    <td>@todos.id</td>
+                    <td>@todos.todo</td>
+                    <td>@(todos.completed ? "Completada  " : "Pendiente  ")</td>
+                    <td>@todos.userId</td>
+                    <td><button type="submit" class="btn btn-primary" @onclick="() => EditarTarea(todos.id)">Editar</button></td>
+                    <td><button type="submit" class="btn btn-danger" @onclick="() => EliminarTarea(todos.id)">Eliminar</button></td>
+                </tr>
+
+                <td colspan="6">
+                    @if (editarToDo && tareaIdEnEdicion == todos.id)
+                    {
+                        <br />
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control input-lg" @bind="textoInput" aria-describedby="basic-addon2">
+                            <div class="input-group-append justify-content-end">
+                                <button class="btn btn-primary" type="button" @onclick="() => GuardarToDo(todos.id)">Guardar</button>
+                                <button class="btn btn-primary" type="button" @onclick=Cerrar>Cerrar</button>
+                            </div>
+                        </div>
+                    }
+                </td>
+                
+            }
+        </tbody>
+    </table>
+
+   
+
+}
+else
+{
+    <p>Cargando Datos...</p>
+}
+
+@*VER LISTA DE TAREAS PENDIENTE*@
+@code{
+    private string filtroSeleccionado = "Todos";
+    private List<Tareas> datos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var apiExterna = "https://dummyjson.com/todos";
+
+        using (var httpClient = new HttpClient())
+        {
+            var response = await httpClient.GetStringAsync(apiExterna);
+            Console.WriteLine($"Respuesta JSON: {response}");
+            var tarea = JsonConvert.DeserializeObject <ListaTareas> (response);
+            datos = tarea.Todos;
+    }
+}
+    public class ListaTareas
+    {
+        [JsonProperty("todos")]
+        public List<Tareas> Todos { get; set; }
+    }
+
+    private List<Tareas> FiltrarTareas()
+    {
+        switch (filtroSeleccionado)
+        {
+            case "Completadas":
+                return datos.Where(todos => todos.completed).ToList();
+            case "Pendientes":
+                return datos.Where(todos => !todos.completed).ToList();
+            default:
+                return datos;
+        }
+
+        StateHasChanged(); // Añade esto para actualizar la interfaz después de cambiar el filtro
+    }
+}
+
+@*AGREGAR NUEVA TAREA Y ABRIR FORMULARIO*@
+<button type="submit" class="btn btn-primary" @onclick="AbrirFormulario">+ Agregar Tarea</button>
+@if (MostrarFormulario)
+{
+    <div class="container">
+        <form @onsubmit="AgregarTarea">
+            <h3>Agregar Tarea</h3>
+            <div class="mb-3">
+                <label for="id" class="form-label">Id</label>
+                <input type="number" class="form-control" id="id" @bind="nuevaTarea.id" readonly />
+            </div>
+            <div class="mb-3">
+                <label for="todo" class="form-label">Todo</label>
+                <input type="text" class="form-control" id="todo" @bind="nuevaTarea.todo" required />
+            </div>
+            <div class="mb-3">
+                <label for="completed" class="form-label">Completed</label>
+                <div class="form-control" readonly>@(nuevaTarea.completed ? "True" : "False")</div>
+            </div>
+            <div class="mb-3">
+                <label for="userId" class="form-label">UserID</label>
+                <input type="number" class="form-control" id="userId" @bind="nuevaTarea.userId" readonly />
+            </div>
+            <button type="submit" class="btn btn-primary">Agregar Tarea</button>
+            <button type="submit" class="btn btn-primary" @onclick="CerrarFormulario">Cerrar Formulario</button>
+        </form>
+    </div>
+}
+
+@*CONTROLAR VISIBILIDAD DEL FORMULARIO*@
+@code{
+    
+    private bool MostrarFormulario = false;
+    private void AbrirFormulario()
+    {
+        MostrarFormulario = true;
+    }
+    private void CerrarFormulario()
+    {
+        MostrarFormulario = false;
+    }
+}
+
+@*AGREGAR NUEVA TAREA*@
+@code {
+    private Tarea nuevaTarea = new Tarea();
+
+    private async Task AgregarTarea()
+    {
+        var tarea= new
+        {
+            id = nuevaTarea.id,
+            todo = nuevaTarea.todo,
+            completed = nuevaTarea.completed,
+            userId = nuevaTarea.userId,
+        };
+
+        // Realizar la solicitud HTTP
+        using (var httpClient = new HttpClient())
+        {
+            // Convertir el objeto tarea a formato JSON
+            var tareaJson = JsonConvert.SerializeObject(tarea);
+
+            Console.WriteLine($"Contenido de tareaJson: {tareaJson}");
+
+            // Configurar el contenido de la solicitud
+            var content = new StringContent(tareaJson, Encoding.UTF8, "application/json");
+
+            // Realizar la solicitud POST a la API externa
+            var response = await httpClient.PostAsync("https://dummyjson.com/todos/add", content);
+
+            // Verificar si la solicitud fue exitosa
+            if (response.IsSuccessStatusCode)
+            {
+                // Imprimir mensaje en la consola
+                Console.WriteLine("Tarea agregada exitosamente.");
+
+                // Reiniciar el objeto para limpiar el formulario
+                nuevaTarea = new Tarea();
+            }
+            else
+            {
+                // Imprimir mensaje en la consola si la solicitud falla
+                Console.WriteLine($"Error al agregar la tarea. Código de estado: {response.StatusCode}");
+            }
+        }
+    }
+
+    private class Tarea
+    {
+        private static int ultimoId = 30;
+
+        public int id { get; set; } = ObtenerNuevoId(); 
+        public string todo { get; set; }
+        public bool completed { get; set; } = false; 
+        public int userId { get; set; } = new Random().Next(0, 99); 
+
+        private static int ObtenerNuevoId()
+        {
+            // Incrementar y devolver el últimoId
+            return ultimoId++;
+        }
+    }
+}
+
+
+
+@*EDITAR TAREA*@
+
+
+@code {
+    private bool editarToDo = false;
+    private string textoInput = string.Empty;
+    private int tareaIdEnEdicion;
+
+    private void EditarTarea(int tareaId)
+    {
+        tareaIdEnEdicion = tareaId;
+        textoInput = datos.First(t => t.id == tareaId).todo;
+        editarToDo = true;
+    }
+
+    private void Cerrar()
+    {
+        editarToDo = false;
+    }
+
+    private async Task GuardarToDo(int tareaId)
+    {
+        var urlEditar = $"https://dummyjson.com/todos/{tareaIdEnEdicion}";
+        Console.WriteLine($"ID de la tarea a editar: {tareaIdEnEdicion}");
+        Console.WriteLine($"URL de la solicitud PUT: {urlEditar}");
+
+        // Crear un objeto para la actualización
+        var tareaActualizada = new
+        {
+            id = tareaIdEnEdicion,
+            todo = textoInput,
+            // Puedes incluir otros campos si es necesario
+        };
+
+        // Realizar la solicitud HTTP PUT
+        using (var httpClient = new HttpClient())
+        {
+            var tareaJson = JsonConvert.SerializeObject(tareaActualizada);
+            var content = new StringContent(tareaJson, Encoding.UTF8, "application/json");
+            Console.WriteLine($"JSON enviado: {tareaJson}");
+            var response = await httpClient.PutAsync(urlEditar, content);
+            Console.WriteLine($"Respuesta del servidor: {await response.Content.ReadAsStringAsync()}");
+            if (response.IsSuccessStatusCode)
+            {
+                // Actualización exitosa, actualiza la lista de datos
+                var tarea = datos.First(t => t.id == tareaIdEnEdicion);
+                tarea.todo = textoInput;
+                editarToDo = false;
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine($"Error al actualizar la tarea. Código de estado: {response.StatusCode}");
+            }
+        }
+    }
+}
+
+
+
+@*ELIMINAR TAREA*@
+@code {
+    // ...
+
+    private async Task EliminarTarea(int tareaId)
+    {
+        var urlEliminar = $"https://dummyjson.com/todos/{tareaId}";
+
+        using (var httpClient = new HttpClient())
+        {
+            var response = await httpClient.DeleteAsync(urlEliminar);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Eliminación exitosa, actualiza la lista de datos
+                datos.RemoveAll(t => t.id == tareaId);
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine($"Error al eliminar la tarea. Código de estado: {response.StatusCode}");
+            }
+        }
+    }
+}
