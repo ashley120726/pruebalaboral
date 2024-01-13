@@ -169,33 +169,19 @@ else
             completed = nuevaTarea.completed,
             userId = nuevaTarea.userId,
         };
-
-        // Realizar la solicitud HTTP
         using (var httpClient = new HttpClient())
         {
-            // Convertir el objeto tarea a formato JSON
             var tareaJson = JsonConvert.SerializeObject(tarea);
-
             Console.WriteLine($"Contenido de tareaJson: {tareaJson}");
-
-            // Configurar el contenido de la solicitud
             var content = new StringContent(tareaJson, Encoding.UTF8, "application/json");
-
-            // Realizar la solicitud POST a la API externa
             var response = await httpClient.PostAsync("https://dummyjson.com/todos/add", content);
-
-            // Verificar si la solicitud fue exitosa
             if (response.IsSuccessStatusCode)
             {
-                // Imprimir mensaje en la consola
                 Console.WriteLine("Tarea agregada exitosamente.");
-
-                // Reiniciar el objeto para limpiar el formulario
                 nuevaTarea = new Tarea();
             }
             else
             {
-                // Imprimir mensaje en la consola si la solicitud falla
                 Console.WriteLine($"Error al agregar la tarea. Código de estado: {response.StatusCode}");
             }
         }
@@ -212,17 +198,12 @@ else
 
         private static int ObtenerNuevoId()
         {
-            // Incrementar y devolver el últimoId
             return ultimoId++;
         }
     }
 }
 
-
-
 @*EDITAR TAREA*@
-
-
 @code {
     private bool editarToDo = false;
     private string textoInput = string.Empty;
@@ -245,16 +226,11 @@ else
         var urlEditar = $"https://dummyjson.com/todos/{tareaIdEnEdicion}";
         Console.WriteLine($"ID de la tarea a editar: {tareaIdEnEdicion}");
         Console.WriteLine($"URL de la solicitud PUT: {urlEditar}");
-
-        // Crear un objeto para la actualización
         var tareaActualizada = new
         {
             id = tareaIdEnEdicion,
             todo = textoInput,
-            // Puedes incluir otros campos si es necesario
         };
-
-        // Realizar la solicitud HTTP PUT
         using (var httpClient = new HttpClient())
         {
             var tareaJson = JsonConvert.SerializeObject(tareaActualizada);
@@ -264,7 +240,6 @@ else
             Console.WriteLine($"Respuesta del servidor: {await response.Content.ReadAsStringAsync()}");
             if (response.IsSuccessStatusCode)
             {
-                // Actualización exitosa, actualiza la lista de datos
                 var tarea = datos.First(t => t.id == tareaIdEnEdicion);
                 tarea.todo = textoInput;
                 editarToDo = false;
@@ -278,12 +253,8 @@ else
     }
 }
 
-
-
 @*ELIMINAR TAREA*@
 @code {
-    // ...
-
     private async Task EliminarTarea(int tareaId)
     {
         var urlEliminar = $"https://dummyjson.com/todos/{tareaId}";
@@ -294,7 +265,6 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                // Eliminación exitosa, actualiza la lista de datos
                 datos.RemoveAll(t => t.id == tareaId);
                 StateHasChanged();
             }
