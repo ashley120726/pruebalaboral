@@ -6,7 +6,7 @@ Explicación
 3. La descripcion de las tareas se solicito que fueran editables, se confecciono el input para editar pero no se logro realizar el cambio en el api externo por un choque en cuanto a solicitudes con la api
 Ejemplo del mensaje en consola:
    ID de la tarea a editar: 1
-   URL de la solicitud PUT: https://dummyjson.com/todos/id:1
+   URL de la solicitud PUT: https://dummyjson.com/todos/1
    JSON enviado: {"id":1,"todo":"Hola Mundo"}
    Respuesta del servidor: {"message":"Todo with id '1' not found"}
    Error al actualizar la tarea. Código de estado: NotFound
